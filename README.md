@@ -1,5 +1,8 @@
+# PyWSL
+
 Usage example:
 
+```python
 import time
 import pywsl 
 
@@ -46,5 +49,5 @@ if __name__ == "__main__":
     print(wsl.install_package("htop","123456"))
     
     wsl.launch_interactive("nano")
-    
+```    
 
