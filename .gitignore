@@ -61,6 +61,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+PyWSL.egg-info/
 MANIFEST
 
 # PyInstaller
