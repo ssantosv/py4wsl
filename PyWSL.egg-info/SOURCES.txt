@@ -1,6 +1,0 @@
-setup.py
-PyWSL.egg-info/PKG-INFO
-PyWSL.egg-info/SOURCES.txt
-PyWSL.egg-info/dependency_links.txt
-PyWSL.egg-info/requires.txt
-PyWSL.egg-info/top_level.txt
