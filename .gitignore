@@ -273,4 +273,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.toptal.com/developers/gitignore/api/windows,python,macos,visualstudiocode,vim
+# End of https://www.toptal.com/developers/gitignore/api/windows,python,macos,visualstudiocode,vim.python-version pyproject.toml uv.lock
