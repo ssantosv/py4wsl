@@ -1,0 +1,19 @@
+[project]
+name = "pywsl"
+version = "0.0.1"
+authors = [
+  { name="Sergio de los Santos", email="s.delossantos@gmail.com" },
+]
+description = "A python WSL wrapper"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = { file = "LICENSE" }
+
+
+[project.urls]
+Homepage = "https://github.com/ssantos/pywsl"
+Issues = "https://github.com/ssantos/pywsl/issues"
