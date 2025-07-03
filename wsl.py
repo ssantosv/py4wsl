@@ -10,7 +10,7 @@ import shutil
 
 
 # ==================================================
-# Estructuras para la API de Windows
+# API Windows structures
 # ==================================================
 class SECURITY_ATTRIBUTES(ctypes.Structure):
     _fields_ = [
@@ -28,7 +28,7 @@ class OVERLAPPED(ctypes.Structure):
         ("hEvent", wintypes.HANDLE)
     ]
 
-class WSL_DISTRIBUTION_FLAGS(IntFlag):  # Usar IntFlag del módulo enum
+class WSL_DISTRIBUTION_FLAGS(IntFlag):  
     NONE = 0x0
     ENABLE_INTEROP = 0x1
     APPEND_NT_PATH = 0x2
@@ -59,9 +59,9 @@ class WSL:
         self.wslapi.WslIsDistributionRegistered.restype = wintypes.BOOL
 
     def _setup_ctypes(self):
-        # Configuraciones existentes...
         
-        # Nueva configuración para WslConfigureDistribution
+        
+        # New configuraion for WslConfigureDistribution
         self.wslapi.WslConfigureDistribution.argtypes = [
             ctypes.c_wchar_p,          # distributionName
             ctypes.c_ulong,            # defaultUID
@@ -69,7 +69,6 @@ class WSL:
         ]
         self.wslapi.WslConfigureDistribution.restype = ctypes.c_long
 
-        # Configuración para WslGetDistributionConfiguration
         self.wslapi.WslGetDistributionConfiguration.argtypes = [
             ctypes.c_wchar_p,          # distributionName
             POINTER(ctypes.c_ulong),   # distributionVersion
@@ -118,14 +117,14 @@ class WSL:
             if config['flags'] == 0:
                 print("NONE")
             
-            # Manejar variables de entorno de forma segura
+            # Safe environment variables handling
             for i in range(env_count.value):
                 var = env_vars[i]
                 if var:
                     key_value = var.split('=', 1)
                     if len(key_value) == 2:
                         config['env_vars'][key_value[0]] = key_value[1]
-            # Solo libera el array principal, no cada cadena individual
+            
             ctypes.windll.ole32.CoTaskMemFree(env_vars)
 
 
@@ -171,7 +170,7 @@ class WSL:
                     except OSError:
                         break
         except Exception as e:
-            print(f"Error accediendo al registro: {e}")
+            print(f"Error accesing registry: {e}")
         return None
 
 
@@ -190,7 +189,7 @@ class WSL:
         """
         current_config = self.get_distribution_configuration()
         
-        # Mantener valores actuales si no se especifican
+        # Keep current values if not specified
         final_uid = default_uid if default_uid is not None else current_config['default_uid']
         final_flags = flags if flags is not None else current_config['flags']
 
@@ -276,7 +275,7 @@ class WSL:
 
     def launch_interactive(self, command: str = None, use_current_working_directory: bool = True) -> dict:
         """
-        Ejecuta un comando interactivo usando WslLaunchInteractive.
+        Executes an interactive command using WslLaunchInteractive.
         
             Args:
                 command (str, optional): Command to execute. If None, launches the default shell.
@@ -303,7 +302,7 @@ class WSL:
         }
     
     def _configure_kernel32_functions(self):
-        """Configura las funciones de la API de Windows"""
+        """Configure API Windows"""
         self.kernel32.CreatePipe.argtypes = [
             ctypes.POINTER(wintypes.HANDLE),
             ctypes.POINTER(wintypes.HANDLE),
@@ -453,7 +452,7 @@ class WSL:
             return -2
 
     # ==============================================
-    # Métodos públicos
+    # Public methods
     # ==============================================
     def launch(self, command: str, capture_output: bool = True) -> dict:
         """Execute a command using the native api"""
@@ -499,15 +498,15 @@ class WSL:
                 "exit_code": e.returncode
             }
     # ========================
-    # Funciones de administración
+    # Administration
     # ========================
     
     def parse_wsl_conf(self):
         raw_content = self.read_wsl_conf()
         if isinstance(raw_content, dict):
-            # Ya está parseado, simplemente retorna
+            # Parsed. Just return.
             return raw_content
-        # Si es string, entonces lo analizas línea a línea
+         
         config = {
             'automount': {},
             'network': {},
@@ -595,26 +594,26 @@ class WSL:
         ("zypper", "zypper se --installed-only"),
     ]
         for name, cmd in commands:
-        # Verifica si el gestor de paquetes está disponible
+        # Check package manager available
             check = self.run_command(f"which {name}")
             if isinstance(check, dict):
                 found = bool(check.get('stdout', '').strip())
             else:
                 found = bool(check.strip())
             if not found:
-                continue  # El gestor no está presente, prueba el siguiente
+                continue  
 
-            # Ejecuta el comando para listar paquetes
+            # Execute command to list packages
             result = self.run_command(cmd)
             output = result.get('stdout', '') if isinstance(result, dict) else result
             if output:
                 return output.splitlines()
 
-        # Si ninguno está disponible, retorna una lista vacía
+        # Empty list if no manager available
         return []
 
     # ========================
-    # Funciones de configuración Windows
+    # Windows configuration
     # ========================
     def read_wslconfig(self):
         """Read .wslconfig"""
@@ -629,7 +628,7 @@ class WSL:
 
     def parse_wslconfig(self):
         """Analyzes .wslconfig and return dictionary"""
-        raw_content = self.read_wslconfig()  # Debe devolver el texto plano del archivo
+        raw_content = self.read_wslconfig()  
         config = {
             'wsl2': {}
         }
@@ -645,10 +644,10 @@ class WSL:
                 key, value = line.split('=', 1)
                 key = key.strip().lower()
                 value = value.strip()
-                # Convertir booleanos
+                # Boolean converter
                 if value.lower() in ('true', 'false'):
                     value = value.lower() == 'true'
-                # Convertir números si corresponde
+                # Convert numbers
                 elif value.isdigit():
                     value = int(value)
                 if current_section in config:
@@ -673,12 +672,12 @@ class WSL:
     def wsl2_localhost_forwarding(self):
         """Returns True/False for localhostForwarding in WSL2"""
         conf = self.parse_wslconfig()
-        return conf.get('wsl2', {}).get('localhostforwarding', True)  # True por defecto
+        return conf.get('wsl2', {}).get('localhostforwarding', True)  
 
     def wsl2_gui_applications(self):
         """Devuelve True/False según la opción guiApplications de WSL2"""
         conf = self.parse_wslconfig()
-        return conf.get('wsl2', {}).get('guiapplications', True)  # True por defecto
+        return conf.get('wsl2', {}).get('guiapplications', True)  
 
 
     # ========================
@@ -717,7 +716,7 @@ done
         self.launch(f"tmux new-session -d '{wsl_dest}'")
 
     # ========================
-    # Funciones de archivo
+    # File functions
     # ========================
     def copy_to_wsl(self, origin, dest, distro="Ubuntu"):
         """
@@ -727,7 +726,7 @@ done
         - distro: Name of the WSL distribution (default 'Ubuntu')
 
         """
-        #Paso 1: Convertir la ruta destino de Linux a ruta Windows usando wslpath
+        # wslpath to convert linux destination path
         print(dest)
         try:
              result = subprocess.run(
@@ -738,21 +737,21 @@ done
              )
              dest_win = result.stdout.strip()
              if not dest:
-                 raise RuntimeError("La conversión de rutaº no devolvió resultado.")
+                 raise RuntimeError("Path convertion with no result.")
         except subprocess.CalledProcessError as e:
-             raise RuntimeError(f"Error ejecutando wslpath: {e.stderr.strip()}") from e
+             raise RuntimeError(f"Error executing wslpath: {e.stderr.strip()}") from e
         except Exception as e:
-             raise RuntimeError(f"Error inesperado al convertir la ruta: {e}") from e
+             raise RuntimeError(f"Unexpected error converting path: {e}") from e
 
              
 
-        # Paso 3: Copiar el archivo
+        # Copy the file
         try:
             shutil.copy2(origin, dest_win)
             
             return True
         except Exception as e:
-            raise RuntimeError(f"Error copiando el archivo: {e}") from e
+            raise RuntimeError(f"Error copying file: {e}") from e
 
 
     def copy_from_wsl(self, origin, dest, distro="Ubuntu"):
@@ -763,7 +762,7 @@ done
         - distro: Name of the WSL distribution (default 'Ubuntu')
         
         """
-        # Paso 1: Convertir la ruta de origen de Linux a Windows usando wslpath
+        # wslpath converting origin linux path to windows
         try:
             result = subprocess.run(
                 ["wsl", "-d", distro, "wslpath", "-w", origin],
@@ -773,22 +772,22 @@ done
             )
             origin_win = result.stdout.strip()
             if not origin_win:
-                raise RuntimeError("La conversión de ruta no devolvió resultado.")
+                raise RuntimeError("Path convertion with no result.")
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Error ejecutando wslpath: {e.stderr.strip()}") from e
+            raise RuntimeError(f"Error executing wslpath: {e.stderr.strip()}") from e
         except Exception as e:
-            raise RuntimeError(f"Error inesperado al convertir la ruta: {e}") from e
+            raise RuntimeError(f"Unexpected error converting path: {e}") from e
 
-        # Paso 2: Verificar que el archivo existe en la ruta de Windows
+        # Check if file exists in windows path
         if not os.path.isfile(origin_win):
-            raise FileNotFoundError(f"El archivo de origen no existe: {origin_win}")
+            raise FileNotFoundError(f"Origin file does not exists: {origin_win}")
 
-        # Paso 3: Copiar el archivo al destino en Windows
+        # Copy file to windows path
         try:
             shutil.copy2(origin_win, dest)
             return True
         except Exception as e:
-            raise RuntimeError(f"Error copiando el archivo: {e}") from e
+            raise RuntimeError(f"Error copying file: {e}") from e
 
 
     def wsl_backup(self, dest, distro="Ubuntu"):
@@ -803,7 +802,7 @@ done
         return process
 
     # ========================
-    # Funciones de red
+    # Network funtions
     # ========================
 
 
@@ -817,6 +816,6 @@ done
         else:
             cmd = "wsl hostname -I"
         result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-        ip = result.stdout.strip().split()[0]  # Primer IPa devuelta
+        ip = result.stdout.strip().split()[0]  
         return ip
     
