@@ -27,7 +27,7 @@ Ideal for automation, administration tools, continuous integration, or simply to
 ## 📦 Installation
 
 ```
-pip install Py4Wsl  # Coming soon on PyPI
+pip install Py4Wsl  
 ```
 
 Or simply add `wsl.py` to your project.
@@ -208,7 +208,7 @@ Ideal para automatización, herramientas de administración, integración contin
 ## 📦 Instalación
 
 
-pip install Py4Wsl # Próximamente en PyPI
+pip install Py4Wsl 
 
 O simplemente añade `wsl.py` a tu proyecto.
 
