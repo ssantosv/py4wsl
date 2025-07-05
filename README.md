@@ -1,12 +1,12 @@
-# 🐧 WSL-Python: Wrapper to interact with WSL from Python
+# 🐧 Py4Wsl: Wrapper to interact with WSL from Python
 
 ---
 
-## 🚀 What is WSL-Python?
+## 🚀 What is Py4Wsl?
 
-**WSL-Python** is a library that allows you to easily and powerfully interact with the Windows Subsystem for Linux (WSL) directly from Python. It provides a *wrapper* to execute commands, manage distributions, manipulate files between Windows and WSL, and configure different aspects of your WSL environment, all from your Python code.
+**Py4Wsl** is a library that allows you to easily and powerfully interact with the Windows Subsystem for Linux (WSL) directly from Python. It provides a *wrapper* to execute commands, manage distributions, manipulate files between Windows and WSL, and configure different aspects of your WSL environment, all from your Python code.
 
-> **WSL-Python uses both Python's `subprocess` module and native calls to the Windows `wslapi.dll` DLL, selecting the most suitable method depending on the needs of each operation.** This allows combining flexibility, compatibility, and maximum performance.
+> **Py4Wsl uses both Python's `subprocess` module and native calls to the Windows `wslapi.dll` DLL, selecting the most suitable method depending on the needs of each operation.** This allows combining flexibility, compatibility, and maximum performance.
 
 Ideal for automation, administration tools, continuous integration, or simply to make your life with WSL much easier.
 
@@ -27,7 +27,7 @@ Ideal for automation, administration tools, continuous integration, or simply to
 ## 📦 Installation
 
 ```
-pip install wsl-python  # Coming soon on PyPI
+pip install Py4Wsl  # Coming soon on PyPI
 ```
 
 Or simply add `wsl.py` to your project.
@@ -119,23 +119,23 @@ MIT License
 
 ---
 
-Thank you for using and improving **WSL-Python**!  
+Thank you for using and improving **Py4Wsl**!  
 🐧💻✨
 
 ---
 
-# PyWSL
+# py4wsl
 
 Usage example:
 
 ```python
 import time
-import pywsl 
+import py4wsl 
 
 
 if __name__ == "__main__":
 
-    wsl = pywsl.WSL(distro="Ubuntu")  
+    wsl = py4wsl.WSL(distro="Ubuntu")  
     print(wsl.read_wsl_conf()["stderr"])
     print(wsl.read_wsl_conf()["stdout"])
     print(wsl.list_installed_packages())
@@ -179,15 +179,15 @@ if __name__ == "__main__":
 ```
 
 
-# 🐧 WSL-Python: Wrapper para interactuar con WSL desde Python
+# 🐧 Py4Wsl: Wrapper para interactuar con WSL desde Python
 
 ---
 
-## 🚀 ¿Qué es WSL-Python?
+## 🚀 ¿Qué es Py4Wsl?
 
-**WSL-Python** es una librería que te permite interactuar de forma sencilla y potente con el Subsistema de Windows para Linux (WSL) directamente desde Python. Proporciona un *wrapper* para ejecutar comandos, administrar distribuciones, manipular archivos entre Windows y WSL, y configurar distintos aspectos de tu entorno WSL, todo desde tu código Python.
+**Py4Wsl** es una librería que te permite interactuar de forma sencilla y potente con el Subsistema de Windows para Linux (WSL) directamente desde Python. Proporciona un *wrapper* para ejecutar comandos, administrar distribuciones, manipular archivos entre Windows y WSL, y configurar distintos aspectos de tu entorno WSL, todo desde tu código Python.
 
-> **WSL-Python utiliza tanto el módulo `subprocess` de Python como llamadas nativas directas a la DLL `wslapi.dll` de Windows, seleccionando el método más adecuado según las necesidades de cada operación**. Esto permite combinar flexibilidad, compatibilidad y máximo rendimiento.
+> **Py4Wsl utiliza tanto el módulo `subprocess` de Python como llamadas nativas directas a la DLL `wslapi.dll` de Windows, seleccionando el método más adecuado según las necesidades de cada operación**. Esto permite combinar flexibilidad, compatibilidad y máximo rendimiento.
 
 Ideal para automatización, herramientas de administración, integración continua o simplemente para hacer tu vida con WSL mucho más fácil.
 
@@ -208,7 +208,7 @@ Ideal para automatización, herramientas de administración, integración contin
 ## 📦 Instalación
 
 
-pip install wsl-python # Próximamente en PyPI
+pip install Py4Wsl # Próximamente en PyPI
 
 O simplemente añade `wsl.py` a tu proyecto.
 
@@ -287,24 +287,24 @@ MIT License
 
 ---
 
-¡Gracias por usar y mejorar **WSL-Python**!  
+¡Gracias por usar y mejorar **Py4Wsl**!  
 🐧💻✨
 
 
 
 
-# PyWSL
+# py4wsl
 
 Usage example:
 
 ```python
 import time
-import pywsl 
+import py4wsl 
 
 
 if __name__ == "__main__":
 
-    wsl = pywsl.WSL(distro="Ubuntu")  
+    wsl = py4wsl.WSL(distro="Ubuntu")  
     print(wsl.read_wsl_conf()["stderr"])
     print(wsl.read_wsl_conf()["stdout"])
     print(wsl.list_installed_packages())
