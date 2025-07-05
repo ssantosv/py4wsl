@@ -1,5 +1,5 @@
 [project]
-name = "pywsl"
+name = "py4wsl"
 version = "0.0.1"
 authors = [
   { name="Sergio de los Santos", email="s.delossantos@gmail.com" },
@@ -15,5 +15,5 @@ license = { file = "LICENSE" }
 
 
 [project.urls]
-Homepage = "https://github.com/ssantos/pywsl"
-Issues = "https://github.com/ssantos/pywsl/issues"
+Homepage = "https://github.com/ssantos/py4wsl"
+Issues = "https://github.com/ssantos/py4wsl/issues"
