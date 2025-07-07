@@ -218,7 +218,7 @@ O simplemente añade `wsl.py` a tu proyecto.
 
 ### 1. Ejecutar un comando en WSL y obtener la salida
 
-from wsl import WSL
+from py4wsl import WSL
 
 wsl = WSL(distro='Ubuntu')
 result = wsl.launch('ls -l /home')
