@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='Py4WSL',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     url='https://github.com/ssantosv/py4wsl',  # Reemplaza con tu URL
     license='MIT',
