@@ -39,7 +39,7 @@ Or simply add `wsl.py` to your project.
 ### 1. Run a command in WSL and get the output
 
 ```
-from wsl import WSL
+from py4wsl import WSL
 
 wsl = WSL(distro='Ubuntu')
 result = wsl.launch('ls -l /home')
