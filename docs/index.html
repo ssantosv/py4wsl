@@ -2301,12 +2301,12 @@
         <span class="k">return</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wsl2&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;memory&#39;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">wsl2_processors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns processors in WSL2 o None&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns processors in WSL2 or None&quot;&quot;&quot;</span>
         <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_wslconfig</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wsl2&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;processors&#39;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">wsl2_swap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns swap size in WSL2 o None&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns swap size in WSL2 or None&quot;&quot;&quot;</span>
         <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_wslconfig</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wsl2&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;swap&#39;</span><span class="p">)</span>
 
@@ -3904,7 +3904,7 @@ Returns:
 
     <div class="doc doc-contents ">
 
-        <p>Returns processors in WSL2 o None</p>
+        <p>Returns processors in WSL2 or None</p>
 
 
             <details class="quote">
@@ -3913,7 +3913,7 @@ Returns:
 <span class="normal">664</span>
 <span class="normal">665</span>
 <span class="normal">666</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">wsl2_processors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns processors in WSL2 o None&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns processors in WSL2 or None&quot;&quot;&quot;</span>
     <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_wslconfig</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wsl2&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;processors&#39;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -3933,7 +3933,7 @@ Returns:
 
     <div class="doc doc-contents ">
 
-        <p>Returns swap size in WSL2 o None</p>
+        <p>Returns swap size in WSL2 or None</p>
 
 
             <details class="quote">
@@ -3942,7 +3942,7 @@ Returns:
 <span class="normal">669</span>
 <span class="normal">670</span>
 <span class="normal">671</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">wsl2_swap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns swap size in WSL2 o None&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns swap size in WSL2 or None&quot;&quot;&quot;</span>
     <span class="n">conf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_wslconfig</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">conf</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;wsl2&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;swap&#39;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>

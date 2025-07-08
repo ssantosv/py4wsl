@@ -660,12 +660,12 @@ class WSL:
         return conf.get('wsl2', {}).get('memory')
 
     def wsl2_processors(self):
-        """Returns processors in WSL2 o None"""
+        """Returns processors in WSL2 or None"""
         conf = self.parse_wslconfig()
         return conf.get('wsl2', {}).get('processors')
 
     def wsl2_swap(self):
-        """Returns swap size in WSL2 o None"""
+        """Returns swap size in WSL2 or None"""
         conf = self.parse_wslconfig()
         return conf.get('wsl2', {}).get('swap')
 
