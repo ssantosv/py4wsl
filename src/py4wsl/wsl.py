@@ -1,134 +1,56 @@
-import subprocess
+import ctypes
 import os
 import shlex
-import threading
-from ctypes import wintypes, POINTER, c_char_p
-from enum import IntFlag
-import ctypes
-import winreg
 import shutil
+import subprocess
+import threading
+import winreg
+from ctypes import wintypes
+from typing import Tuple
+
+from pykernel import kernel32, wslapi
+from pykernel.kernel32 import WaitResult, Overlapped
+from pykernel.wslapi import WslHResult, WslDistributionFlags
 
 
 # ==================================================
 # API Windows structures
 # ==================================================
-class SECURITY_ATTRIBUTES(ctypes.Structure):
-    _fields_ = [
-        ("nLength", wintypes.DWORD),
-        ("lpSecurityDescriptor", ctypes.c_void_p),
-        ("bInheritHandle", wintypes.BOOL)
-    ]
-
-class OVERLAPPED(ctypes.Structure):
-    _fields_ = [
-        ("Internal", ctypes.c_ulonglong),
-        ("InternalHigh", ctypes.c_ulonglong),
-        ("Offset", wintypes.DWORD),
-        ("OffsetHigh", wintypes.DWORD),
-        ("hEvent", wintypes.HANDLE)
-    ]
-
-class WSL_DISTRIBUTION_FLAGS(IntFlag):  
-    NONE = 0x0
-    ENABLE_INTEROP = 0x1
-    APPEND_NT_PATH = 0x2
-    ENABLE_DRIVE_MOUNTING = 0x4
-
 
 class WSL:
-    
+
     def __init__(self, distro='Ubuntu'):
         self.distro = distro
-        self._setup_ctypes()
-        self.ole32 = ctypes.WinDLL('ole32')
+        self.wsl_api = wslapi.WslAPI()
+        self.kernel32py = kernel32.Kernel32()
 
-        self.wslapi.WslRegisterDistribution.argtypes = [
-            ctypes.c_wchar_p,  # distributionName
-            ctypes.c_wchar_p   # tarGzFilename
-        ]
-        self.wslapi.WslRegisterDistribution.restype = ctypes.c_long
-        
-        self.wslapi.WslUnregisterDistribution.argtypes = [
-            ctypes.c_wchar_p  # distributionName
-        ]
-        self.wslapi.WslUnregisterDistribution.restype = ctypes.c_long
-        
-        self.wslapi.WslIsDistributionRegistered.argtypes = [
-            ctypes.c_wchar_p  # distributionName
-        ]
-        self.wslapi.WslIsDistributionRegistered.restype = wintypes.BOOL
-
-    def _setup_ctypes(self):
-        
-        
-        # New configuraion for WslConfigureDistribution
-        self.wslapi.WslConfigureDistribution.argtypes = [
-            ctypes.c_wchar_p,          # distributionName
-            ctypes.c_ulong,            # defaultUID
-            ctypes.c_ulong             # wslDistributionFlags (como DWORD)
-        ]
-        self.wslapi.WslConfigureDistribution.restype = ctypes.c_long
-
-        self.wslapi.WslGetDistributionConfiguration.argtypes = [
-            ctypes.c_wchar_p,          # distributionName
-            POINTER(ctypes.c_ulong),   # distributionVersion
-            POINTER(ctypes.c_ulong),   # defaultUID
-            POINTER(ctypes.c_ulong),   # wslDistributionFlags
-            POINTER(POINTER(c_char_p)),# defaultEnvironmentVariables
-            POINTER(ctypes.c_ulong)    # defaultEnvironmentVariableCount
-        ]
-        self.wslapi.WslGetDistributionConfiguration.restype = ctypes.c_long
     def get_distribution_configuration(self):
         config = {
-            #'name': None,
+            'name': self.distro,
             'version': None,
             'default_uid': None,
             'flags': None,
             'env_vars': {}
         }
 
-        
-        version = ctypes.c_ulong()
-        uid = ctypes.c_ulong()
-        flags = ctypes.c_ulong()
-        env_vars = ctypes.POINTER(ctypes.c_wchar_p)()
-        env_count = ctypes.c_ulong()
+        h_result, configuration = self.wsl_api.wsl_get_distribution_configuration(distribution_name=self.distro)
 
-        hr = self.wslapi.WslGetDistributionConfiguration(
-            self.distro,
-            
-            ctypes.byref(version),
-            ctypes.byref(uid),
-            ctypes.byref(flags),
-            ctypes.byref(env_vars),
-            ctypes.byref(env_count)
-        )
-
-        if hr == 0:
-            config['version'] = version.value
-            config['default_uid'] = uid.value
-            config['flags'] = flags.value  
-            if config['flags'] & 0x1: 
+        if h_result == WslHResult.S_OK and configuration is not None:
+            config['version'] = configuration.version
+            config['default_uid'] = configuration.uid
+            config['flags'] = configuration.flags
+            if config['flags'] & WslDistributionFlags.ENABLE_INTEROP:
                 print("ENABLE_INTEROP")
-            if config['flags'] & 0x2:
+            if config['flags'] & WslDistributionFlags.APPEND_NT_PATH:
                 print("APPEND_NT_PATH")
-            if config['flags'] & 0x4:
+            if config['flags'] & WslDistributionFlags.ENABLE_DRIVE_MOUNTING:
                 print("ENABLE_DRIVE_MOUNTING")
-            if config['flags'] == 0:
+            if config['flags'] == WslDistributionFlags.NONE:
                 print("NONE")
-            
-            # Safe environment variables handling
-            for i in range(env_count.value):
-                var = env_vars[i]
-                if var:
-                    key_value = var.split('=', 1)
-                    if len(key_value) == 2:
-                        config['env_vars'][key_value[0]] = key_value[1]
-            
-            ctypes.windll.ole32.CoTaskMemFree(env_vars)
 
+            config['env_vars'] = configuration.env_vars
 
-        return config if hr == 0 else None
+        return config if h_result == WslHResult.S_OK else None
 
     def get_wsl_distro_info_by_name(self):
         """
@@ -173,10 +95,7 @@ class WSL:
             print(f"Error accesing registry: {e}")
         return None
 
-
-    def configure_distribution(self, 
-                             default_uid: int = None, 
-                             flags: WSL_DISTRIBUTION_FLAGS = None):
+    def configure_distribution(self, default_uid: int = None, flags: WslDistributionFlags = None) -> bool:
         """
         
         Configure the WSL distribution parameters
@@ -184,36 +103,32 @@ class WSL:
 
         Args:
             default_uid (int): Default user UID
-            flags (WSL_DISTRIBUTION_FLAGS): Configuration flags
+            flags (WslDistributionFlags): Configuration flags
         
         """
         current_config = self.get_distribution_configuration()
-        
+
         # Keep current values if not specified
         final_uid = default_uid if default_uid is not None else current_config['default_uid']
         final_flags = flags if flags is not None else current_config['flags']
 
-        hr = self.wslapi.WslConfigureDistribution(
-            self.distro,
-            final_uid,
-            final_flags.value if isinstance(final_flags, WSL_DISTRIBUTION_FLAGS) else final_flags
-        )
-        
-        return hr == 0
+        return self.wsl_api.wsl_configure_distribution(
+            distribution_name=self.distro, uid=final_uid, flags=final_flags
+        ) == WslHResult.S_OK
 
-    def set_distribution_flag(self, flag: WSL_DISTRIBUTION_FLAGS, enable: bool):
+    def set_distribution_flag(self, flag: WslDistributionFlags, enable: bool):
         """"Modify a specific flag while keeping the others unchanged"""
         config = self.get_distribution_configuration()
         if not config:
             return False
-            
+
         current_flags = config['flags']
-        
+
         if enable:
             new_flags = current_flags | flag
         else:
             new_flags = current_flags & ~flag
-            
+
         return self.configure_distribution(flags=new_flags)
 
     def register_distribution(self, distribution_name: str, tar_gz_path: str) -> bool:
@@ -227,8 +142,9 @@ class WSL:
         Returns:
         bool: True if registration was successful, False if it faileda
         """
-        hr = self.wslapi.WslRegisterDistribution(distribution_name, tar_gz_path)
-        return hr == 0  # S_OK = 0
+        return self.wsl_api.wsl_register_distribution(
+            distribution_name=distribution_name, tar_gz_path=tar_gz_path
+        ) == WslHResult.S_OK
 
     def unregister_distribution(self, distribution_name: str) -> bool:
         """
@@ -239,8 +155,7 @@ class WSL:
         Returns:
             bool: True if the operation was successful
         """
-        hr = self.wslapi.WslUnregisterDistribution(distribution_name)
-        return hr == 0  # S_OK = 0
+        return self.wsl_api.wsl_unregister_distribution(distribution_name=distribution_name) == WslHResult.S_OK
 
     def is_distribution_registered(self, distribution_name: str) -> bool:
         """
@@ -252,26 +167,7 @@ class WSL:
         Returns:
         bool: True if the distribution is registered
         """
-        return bool(self.wslapi.WslIsDistributionRegistered(distribution_name))
-    
-    def _setup_ctypes(self):
-        self.wslapi = ctypes.WinDLL("wslapi.dll")
-        self.kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-
-        # Configurar WslLaunch
-        self.wslapi.WslLaunch.argtypes = [
-            ctypes.c_wchar_p,
-            ctypes.c_wchar_p,
-            wintypes.BOOL,
-            wintypes.HANDLE,
-            wintypes.HANDLE,
-            wintypes.HANDLE,
-            ctypes.POINTER(wintypes.HANDLE)
-        ]
-        self.wslapi.WslLaunch.restype = ctypes.c_long
-
-        # Configurar funciones de kernel32
-        self._configure_kernel32_functions()
+        return bool(self.wsl_api.wsl_is_distribution_registered(distribution_name))
 
     def launch_interactive(self, command: str = None, use_current_working_directory: bool = True) -> dict:
         """
@@ -287,94 +183,37 @@ class WSL:
                 "exit_code": int (only if hr == 0)
                 }
         """
-        exit_code = wintypes.DWORD()
-        
-        hr = self.wslapi.WslLaunchInteractive(
-            self.distro,
-            command,
-            use_current_working_directory,
-            ctypes.byref(exit_code)
-        )
-        
+
+        hr, exit_code = self.wsl_api.wsl_launch_interactive(
+            distribution_name=self.distro, command=command, use_current_working_directory=use_current_working_directory)
+
         return {
             "hr": hr,
-            "exit_code": exit_code.value if hr == 0 else None
+            "exit_code": exit_code
         }
-    
-    def _configure_kernel32_functions(self):
-        """Configure API Windows"""
-        self.kernel32.CreatePipe.argtypes = [
-            ctypes.POINTER(wintypes.HANDLE),
-            ctypes.POINTER(wintypes.HANDLE),
-            ctypes.POINTER(SECURITY_ATTRIBUTES),
-            wintypes.DWORD
-        ]
-        self.kernel32.CreatePipe.restype = wintypes.BOOL
 
-        self.kernel32.ReadFile.argtypes = [
-            wintypes.HANDLE,
-            ctypes.c_void_p,
-            wintypes.DWORD,
-            ctypes.POINTER(wintypes.DWORD),
-            ctypes.POINTER(OVERLAPPED)
-        ]
-        self.kernel32.ReadFile.restype = wintypes.BOOL
-
-        self.kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-        self.kernel32.CloseHandle.restype = wintypes.BOOL
-
-        self.kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
-        self.kernel32.WaitForSingleObject.restype = wintypes.DWORD
-
-        self.kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
-        self.kernel32.GetExitCodeProcess.restype = wintypes.BOOL
-
-
-    def _create_pipe(self):
+    def _create_pipe(self) -> Tuple[wintypes.HANDLE, wintypes.HANDLE]:
         """Create an anonymous pipe with handle inheritance"""
-        sa = SECURITY_ATTRIBUTES()
-        sa.nLength = ctypes.sizeof(SECURITY_ATTRIBUTES)
-        sa.lpSecurityDescriptor = None
-        sa.bInheritHandle = True
-
-        read_handle = wintypes.HANDLE()
-        write_handle = wintypes.HANDLE()
-
-        if not self.kernel32.CreatePipe(
-            ctypes.byref(read_handle),
-            ctypes.byref(write_handle),
-            ctypes.byref(sa),
-            0
-        ):
-            raise ctypes.WinError(ctypes.get_last_error())
-        
-        return read_handle, write_handle
+        return self.kernel32py.create_pipe()
 
     def _read_pipe_async(self, handle):
         """Read data from a pipe asynchronously."""
         buffer = ctypes.create_string_buffer(4096)
-        bytes_read = wintypes.DWORD()
-        overlapped = OVERLAPPED()
+        overlapped = Overlapped()
         output = b""
 
         while True:
-            success = self.kernel32.ReadFile(
-                handle,
-                buffer,
-                ctypes.sizeof(buffer),
-                ctypes.byref(bytes_read),
-                ctypes.byref(overlapped)
-            )
-            
+            success = self.kernel32py.read_file(pipe_handle=handle, buffer=buffer, overlapped=overlapped)
+
             if not success and ctypes.get_last_error() != 997:  # ERROR_IO_PENDING
                 break
-                
-            self.kernel32.GetOverlappedResult(handle, ctypes.byref(overlapped), ctypes.byref(bytes_read), True)
-            if bytes_read.value == 0:
+
+            n_bytes_transferred = self.kernel32py.get_overlapped_result(pipe_handle=handle, overlapped=overlapped)
+            if n_bytes_transferred == 0:
                 break
-                
-            output += buffer[:bytes_read.value]
-        
+
+            output += buffer[:n_bytes_transferred]
+
         return output
 
     def _launch_process(self, command):
@@ -385,40 +224,36 @@ class WSL:
 
         try:
             # Lanzar proceso
-            hr = self.wslapi.WslLaunch(
-                self.distro,
-                command,
-                True,
-                wintypes.HANDLE(0),
-                stdout_write,
-                stderr_write,
-                ctypes.byref(process_handle)
+
+            hr = self.wsl_api.wsl_launch(
+                distribution_name=self.distro, command=command, std_in=wintypes.HANDLE(0), std_out=stdout_write,
+                std_err=stderr_write, process_handle=process_handle
             )
 
-            if hr != 0:
+            if hr != WslHResult.S_OK:
                 return {"hr": hr, "stdout": b"", "stderr": b"", "exit_code": 1}
 
             # Cerrar extremos de escritura
-            self.kernel32.CloseHandle(stdout_write)
-            self.kernel32.CloseHandle(stderr_write)
+            self.kernel32py.close_handle(stdout_write)
+            self.kernel32py.close_handle(stderr_write)
 
             # Leer salida en hilos separados
             stdout_buffer = []
             stderr_buffer = []
-            
+
             stdout_thread = threading.Thread(
                 target=lambda: stdout_buffer.append(self._read_pipe_async(stdout_read))
             )
             stderr_thread = threading.Thread(
                 target=lambda: stderr_buffer.append(self._read_pipe_async(stderr_read))
             )
-            
+
             stdout_thread.start()
             stderr_thread.start()
 
             # Esperar proceso con timeout
             exit_code = self._wait_for_process(process_handle)
-            
+
             # Esperar hilos
             stdout_thread.join()
             stderr_thread.join()
@@ -435,18 +270,17 @@ class WSL:
             handles = [stdout_read, stderr_read, process_handle]
             for handle in handles:
                 if handle:
-                    self.kernel32.CloseHandle(handle)
+                    self.kernel32py.close_handle(pipe_handle=handle)
 
     def _wait_for_process(self, process_handle, timeout=30000):
         """Wait for the process to finish with a maximum timeout."""
-        result = self.kernel32.WaitForSingleObject(process_handle, timeout)
-        
-        if result == 0x00000000:  # WAIT_OBJECT_0
-            exit_code = wintypes.DWORD()
-            self.kernel32.GetExitCodeProcess(process_handle, ctypes.byref(exit_code))
-            return exit_code.value
-        elif result == 0x00000102:  # WAIT_TIMEOUT
-            self.kernel32.TerminateProcess(process_handle, 1)
+        result = self.kernel32py.wait_for_single_object(process_handle=process_handle, timeout=timeout)
+
+        if result == WaitResult.OBJECT_0:
+            return self.kernel32py.get_exit_code_process(process_handle=process_handle)
+
+        elif result == WaitResult.TIMEOUT:
+            self.kernel32py.terminate_process(process_handle=process_handle)
             return -1
         else:
             return -2
@@ -462,10 +296,11 @@ class WSL:
             "stderr": result["stderr"].decode("utf-8", errors="replace") if capture_output else "",
             "exit_code": result["exit_code"]
         }
-    def run_command(self, command, capture_output=True, shell=False,input=None):
+
+    def run_command(self, command, capture_output=True, shell=False, input=None):
         """Execute a command using subprocess"""
         base_cmd = ['wsl.exe', '-d', self.distro]
-        
+
         try:
             if shell:
                 full_cmd = base_cmd + ['/bin/bash', '-c', command]
@@ -483,37 +318,38 @@ class WSL:
                 check=True,
                 shell=False
             )
-            
+
             return {
                 "stdout": result.stdout,
                 "stderr": result.stderr,
                 "exit_code": result.returncode,
-                
+
             }
-            
+
         except subprocess.CalledProcessError as e:
             return {
                 "stdout": e.stdout,
                 "stderr": e.stderr,
                 "exit_code": e.returncode
             }
+
     # ========================
     # Administration
     # ========================
-    
+
     def parse_wsl_conf(self):
         raw_content = self.read_wsl_conf()
         if isinstance(raw_content, dict):
             # Parsed. Just return.
             return raw_content
-         
+
         config = {
             'automount': {},
             'network': {},
             'interop': {},
             'user': {},
             'boot': {},
-            'useWindowsTimezone':{},
+            'useWindowsTimezone': {},
             'systemd': {}
         }
         current_section = None
@@ -533,7 +369,7 @@ class WSL:
                 if current_section in config:
                     config[current_section][key] = value
         return config
-    
+
     def install_package(self, package, password):
         """Install a package using sudo"""
         return self.run_command(
@@ -542,21 +378,20 @@ class WSL:
             shell=False
         )
 
-
     def is_interop_enabled(self):
         """Returns True if interoperatibility is enabled"""
         conf = self.parse_wsl_conf()
-        return conf.get('interop', {}).get('enabled', True)  
+        return conf.get('interop', {}).get('enabled', True)
 
     def is_systemd_enabled(self):
         """Returns True if systemd is enabled"""
         conf = self.parse_wsl_conf()
-        return conf.get('systemd', {}).get('enabled', True)  
-    
+        return conf.get('systemd', {}).get('enabled', True)
+
     def is_useWindowsTimezone_enabled(self):
         """Returns True if useWindowsTimezone is enabled"""
         conf = self.parse_wsl_conf()
-        return conf.get('useWindowsTimezone', {}).get('enabled', True)  
+        return conf.get('useWindowsTimezone', {}).get('enabled', True)
 
     def get_network_config(self):
         """Returns network configuration in dict format"""
@@ -583,27 +418,26 @@ class WSL:
     def read_wsl_conf(self, output_format='raw'):
         """Reads /etc/wsl.conf"""
         return self._launch_process("cat /etc/wsl.conf")
-        
 
     def list_installed_packages(self):
         """List installed packages"""
         commands = [
-        ("apt", "apt list"),
-        ("dnf", "dnf list installed"),
-        ("yum", "yum list installed"),
-        ("zypper", "zypper se --installed-only"),
-    ]
+            ("apt", "apt list"),
+            ("dnf", "dnf list installed"),
+            ("yum", "yum list installed"),
+            ("zypper", "zypper se --installed-only"),
+        ]
         for name, cmd in commands:
-        # Check package manager available
+            # Check package manager available
             check = self.run_command(f"which {name}")
             if isinstance(check, dict):
                 found = bool(check.get('stdout', '').strip())
             else:
                 found = bool(check.strip())
             if not found:
-                continue  
+                continue
 
-            # Execute command to list packages
+                # Execute command to list packages
             result = self.run_command(cmd)
             output = result.get('stdout', '') if isinstance(result, dict) else result
             if output:
@@ -618,7 +452,7 @@ class WSL:
     def read_wslconfig(self):
         """Read .wslconfig"""
         path = os.path.expanduser("~/.wslconfig")
-        
+
         try:
             with open(path, "r") as f:
                 return f.read()
@@ -628,32 +462,33 @@ class WSL:
 
     def parse_wslconfig(self):
         """Analyzes .wslconfig and return dictionary"""
-        raw_content = self.read_wslconfig()  
+        raw_content = self.read_wslconfig()
         config = {
             'wsl2': {}
         }
         current_section = None
-        for line in raw_content.split('\n'):
-            line = line.strip()
-            if line.startswith('#') or not line:
-                continue
-            if line.startswith('[') and line.endswith(']'):
-                current_section = line[1:-1].lower()
-                continue
-            if '=' in line and current_section:
-                key, value = line.split('=', 1)
-                key = key.strip().lower()
-                value = value.strip()
-                # Boolean converter
-                if value.lower() in ('true', 'false'):
-                    value = value.lower() == 'true'
-                # Convert numbers
-                elif value.isdigit():
-                    value = int(value)
-                if current_section in config:
-                    config[current_section][key] = value
+        if raw_content is not None:
+            for line in raw_content.split('\n'):
+                line = line.strip()
+                if line.startswith('#') or not line:
+                    continue
+                if line.startswith('[') and line.endswith(']'):
+                    current_section = line[1:-1].lower()
+                    continue
+                if '=' in line and current_section:
+                    key, value = line.split('=', 1)
+                    key = key.strip().lower()
+                    value = value.strip()
+                    # Boolean converter
+                    if value.lower() in ('true', 'false'):
+                        value = value.lower() == 'true'
+                    # Convert numbers
+                    elif value.isdigit():
+                        value = int(value)
+                    if current_section in config:
+                        config[current_section][key] = value
         return config
-    
+
     def wsl2_memory(self):
         """Returns memory limit in WSL2 or None"""
         conf = self.parse_wslconfig()
@@ -672,30 +507,28 @@ class WSL:
     def wsl2_localhost_forwarding(self):
         """Returns True/False for localhostForwarding in WSL2"""
         conf = self.parse_wslconfig()
-        return conf.get('wsl2', {}).get('localhostforwarding', True)  
+        return conf.get('wsl2', {}).get('localhostforwarding', True)
 
     def wsl2_gui_applications(self):
         """Devuelve True/False según la opción guiApplications de WSL2"""
         conf = self.parse_wslconfig()
-        return conf.get('wsl2', {}).get('guiapplications', True)  
+        return conf.get('wsl2', {}).get('guiapplications', True)
 
+        # ========================
 
-    # ========================
     # Funciones de mantenimiento
     # ========================
     def wsl_access_dates(self):
         return self.run_command("stat /")
-        
 
     # ========================
     # Funciones de keep alive
     # ========================
     def stop_keep_alive(self):
         self.launch("pkill -f nosleep.sh")
-       
-    
+
     def keep_alive(self):
-        
+
         nuevo_fichero = """
 #!/bin/sh
 while true
@@ -705,13 +538,13 @@ done
 """
         current_dir = os.getcwd()
         script_path = os.path.join(current_dir, "nosleep.sh")
-        with open(script_path, "w", encoding="utf-8",newline='\n') as f:
+        with open(script_path, "w", encoding="utf-8", newline='\n') as f:
             f.write(nuevo_fichero)
-        
+
         wsl_user = str(self.launch('whoami')["stdout"]).strip()
-        
+
         wsl_dest = f"/home/{wsl_user}/nosleep.sh"
-        self.copy_to_wsl(f"nosleep.sh",wsl_dest)        
+        self.copy_to_wsl(f"nosleep.sh", wsl_dest)
         self.launch(f"chmod +x '{wsl_dest}'")
         self.launch(f"tmux new-session -d '{wsl_dest}'")
 
@@ -729,30 +562,27 @@ done
         # wslpath to convert linux destination path
         print(dest)
         try:
-             result = subprocess.run(
-                 ["wsl", "-d", distro, "wslpath", "-w", dest],
-                 capture_output=True,
-                 text=True,
-                 check=True
-             )
-             dest_win = result.stdout.strip()
-             if not dest:
-                 raise RuntimeError("Path convertion with no result.")
+            result = subprocess.run(
+                ["wsl", "-d", distro, "wslpath", "-w", dest],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            dest_win = result.stdout.strip()
+            if not dest:
+                raise RuntimeError("Path convertion with no result.")
         except subprocess.CalledProcessError as e:
-             raise RuntimeError(f"Error executing wslpath: {e.stderr.strip()}") from e
+            raise RuntimeError(f"Error executing wslpath: {e.stderr.strip()}") from e
         except Exception as e:
-             raise RuntimeError(f"Unexpected error converting path: {e}") from e
-
-             
+            raise RuntimeError(f"Unexpected error converting path: {e}") from e
 
         # Copy the file
         try:
             shutil.copy2(origin, dest_win)
-            
+
             return True
         except Exception as e:
             raise RuntimeError(f"Error copying file: {e}") from e
-
 
     def copy_from_wsl(self, origin, dest, distro="Ubuntu"):
         """
@@ -789,10 +619,9 @@ done
         except Exception as e:
             raise RuntimeError(f"Error copying file: {e}") from e
 
-
     def wsl_backup(self, dest, distro="Ubuntu"):
         cmd = f"wsl --export {distro} {dest})"
-        
+
         process = subprocess.Popen(
             cmd,
             shell=True,
@@ -805,7 +634,6 @@ done
     # Network funtions
     # ========================
 
-
     def get_wsl_ip(self):
         """
         Gets current IP.
@@ -816,6 +644,5 @@ done
         else:
             cmd = "wsl hostname -I"
         result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-        ip = result.stdout.strip().split()[0]  
+        ip = result.stdout.strip().split()[0]
         return ip
-    

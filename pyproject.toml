@@ -2,7 +2,7 @@
 name = "py4wsl"
 version = "0.0.2"
 authors = [
-  { name = "Sergio de los Santos", email = "s.delossantos@gmail.com" },
+    { name = "Sergio de los Santos", email = "s.delossantos@gmail.com" },
 ]
 description = "A python WSL wrapper"
 readme = "README.md"
